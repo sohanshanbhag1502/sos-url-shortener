@@ -6,7 +6,7 @@
     }],
     "routes": [
         {
-            "src": "URLShortener/wsgi.py",
+            "src": "/(.*)",
             "dest": "URLShortener/wsgi.py"
         }
     ]
