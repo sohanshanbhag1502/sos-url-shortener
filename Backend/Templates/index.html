@@ -9,7 +9,7 @@
 <body>
     <script>
         var data=JSON.parse("{{data|escapejs}}")
-        window.location.href=data.url
+        window.open(data.url, target="_parent");
     </script>
 </body>
 </html>
