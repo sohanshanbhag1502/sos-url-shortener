@@ -5,12 +5,7 @@ import json
 # Create your views here.
 
 def home(request):
-    return HttpResponse("""
-        <center>
-            <h1 style="font-size:50px">SOS URL Shortener</h1>
-            <p style="font-size:30px;">Welcome to backend of SOS URL Shortener</p>
-        </center>
-    """)
+    return render(request, 'home.html')
 
 def index(request, slug):
     object=URLS.objects.filter(slug=slug)
