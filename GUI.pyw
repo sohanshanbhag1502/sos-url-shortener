@@ -3,6 +3,8 @@
 # Importing required modules
 import csv
 import socket
+import json
+import webbrowser
 from os.path import basename, exists
 from random import randint, choice
 from subprocess import run, Popen, PIPE
@@ -56,17 +58,11 @@ class modules_installer(Tk):
                 'Pip not found', 'Install pip bootstrap before running this.')
             exit(1)
 
-        IPaddress=socket.gethostbyname(socket.gethostname())
-        if IPaddress=="127.0.0.1":
-            messagebox.showerror(
-                'No internet connection', 'Ensure a proper internet connection to install modules.')
-            exit(1)
-        
         # The installer window
         Tk.__init__(self)
         self.attributes('-topmost', True)
         self.geometry('500x300+{}+{}'.format(self.winfo_screenwidth() //2+1-250,
-                     self.winfo_screenheight()//2+1-150))
+                    self.winfo_screenheight()//2+1-150))
         self.overrideredirect(1)
         self.update()
         self.create_install_widgets()
@@ -74,41 +70,45 @@ class modules_installer(Tk):
     def module_install(self):
         # Checking for existance of external modules
         module_list = str(run(['pip', 'list'], capture_output=True,
-                          universal_newlines=True)).replace('\n', '')
+            universal_newlines=True)).replace('\n', '')
         self.update()
 
         # Installation of required modules
         # pyperclip
-        self.module_name.configure(text='Installing pyperclip...')
-        self.update()
-        run(['pip', 'install', 'pyperclip'])
-        self.pro_bar.config(value=25)
-        self.comp.config(text='25.0%')
-        self.update()
+        if 'pyperclip' not in module_list:
+            self.module_name.configure(text='Installing pyperclip...')
+            self.update()
+            run(['pip', 'install', 'pyperclip'])
+            self.pro_bar.config(value=25)
+            self.comp.config(text='25.0%')
+            self.update()
 
         # requests
-        self.module_name.configure(text='Installing requests...')
-        self.update()
-        run(['pip', 'install', 'requests'])
-        self.pro_bar.config(value=50)
-        self.comp.config(text='50.0%')
-        self.update()
+        if 'requests' not in module_list:
+            self.module_name.configure(text='Installing requests...')
+            self.update()
+            run(['pip', 'install', 'requests'])
+            self.pro_bar.config(value=50)
+            self.comp.config(text='50.0%')
+            self.update()
 
         # python imaging library
-        self.module_name.configure(text='Installing pillow (PIL)...')
-        self.update()
-        run(['pip', 'install', 'pillow'])
-        self.pro_bar.config(value=75)
-        self.comp.config(text='75.0%')
-        self.update()
-        
+        if 'pillow' not in module_list:
+            self.module_name.configure(text='Installing pillow (PIL)...')
+            self.update()
+            run(['pip', 'install', 'pillow'])
+            self.pro_bar.config(value=75)
+            self.comp.config(text='75.0%')
+            self.update()
+
         # plyer
-        self.module_name.configure(text='Installing plyer...')
-        self.update()
-        run(['pip', 'install', 'plyer'])
-        self.pro_bar.config(value=100)
-        self.comp.config(text='100.0%')
-        self.update()
+        if 'plyer' not in module_list:
+            self.module_name.configure(text='Installing plyer...')
+            self.update()
+            run(['pip', 'install', 'plyer'])
+            self.pro_bar.config(value=100)
+            self.comp.config(text='100.0%')
+            self.update()
 
         # Notifying the success of installation of modules
         from plyer import notification
@@ -162,10 +162,18 @@ class Mainwin(Tk):
         self.iconbitmap('logo.ico')
         self.config(background='#1e1f1c')
 
+    def connect(self):
+        self.session = requests.session()
+        self.session.headers.update({'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) ' +
+        'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})
+        response=self.session.get('https://sosurl.vercel.app/get')
+        self.db=json.loads(response.text)
+        self.session.get('https://sosurl.vercel.app/post/')
+
     def create_mainwidgets(self):
         # Main header label
         Label(self, text='SOS URL Shortener', font='Haettenschweiler 30',
-              bg='#1e1f1c', fg='#ffffff').pack()
+            bg='#1e1f1c', fg='#ffffff').pack()
 
         # Configuring the appearance of notebook widget
         self.style = ttk.Style()
@@ -189,15 +197,14 @@ class Mainwin(Tk):
 
         # The functions
         call = lambda _:(self.quickshorten.event_generate('<1>'),
-                         self.quickshorten.update(), self.quick_shorten())
+                    self.quickshorten.update(), self.quick_shorten())
 
         def copy_to_clipboard():
             if self.output.get(1.0, END).strip().replace('\n', '') == 'The Shortened url comes here...':
                 pyperclip.copy(self.text1.get(0.0, END) +
-                               self.text2.get(0.0, END))
+                            self.text2.get(0.0, END))
             else:
-                pyperclip.copy(self.text1.get(0.0, END) +
-                               self.text2.get(0.0, END))
+                pyperclip.copy(self.output.get(0, END))
             notification.notify(
                 app_name='URL Shortner',
                 title='Copied to clipboard.',
@@ -249,6 +256,16 @@ class Mainwin(Tk):
         self.clip.bind(
             '<Leave>', lambda _: self.clip.config(font='helvetica 18'))
 
+        # The open with browser label
+        self.openlink = Label(
+            self.Qsframe, text='Open in Browser', fg='lightblue', bg='#262823', font='helvetica 18', cursor='hand2')
+        self.openlink.bind('<Enter>', lambda _: self.openlink.config(
+            font='helvetica 18 underline'))
+        self.openlink.bind(
+            '<Leave>', lambda _: self.openlink.config(font='helvetica 18'))
+        self.openlink.bind('<1>',
+            self.openurl)
+
         # The swastik logo inclusion
         self.logo = Image.open('logo.png')
         self.logo = ImageTk.PhotoImage(self.logo)
@@ -261,6 +278,7 @@ class Mainwin(Tk):
         self.quickshorten.place(x=250, y=380)
         self.output.place(x=9, y=450)
         self.clip.place(x=9, y=490)
+        self.openlink.place(x=400, y=490)
         self.canvas.place(x=500, y=0)
 
         # Event Bindings
@@ -271,11 +289,11 @@ class Mainwin(Tk):
         self.link.bind("<FocusIn>", focusin)
         self.link.bind("<FocusOut>", focusout)
         self.quickshorten.bind('<Enter>',
-                               lambda _: (self.quickshorten.config(foreground='lightgrey', bg='#181818', relief='raised'),
-                               self.quickshorten.place(x=250, y=375)))
+                            lambda _: (self.quickshorten.config(foreground='lightgrey', bg='#181818', relief='raised'),
+                            self.quickshorten.place(x=250, y=375)))
         self.quickshorten.bind('<Leave>',
-                               lambda _: (self.quickshorten.config(foreground='white', bg='#1e1f1c', relief='ridge'),
-                               self.quickshorten.place(x=250, y=380)))
+                            lambda _: (self.quickshorten.config(foreground='white', bg='#1e1f1c', relief='ridge'),
+                            self.quickshorten.place(x=250, y=380)))
         self.clip.bind('<1>', thread2)
 
         # Adding Customizations Labelframe
@@ -291,22 +309,6 @@ class Mainwin(Tk):
         # Used to generate random shortened URL
         url = self.link.get()
 
-        # Accessing the Shortened URL from csv file
-        with open("urlbase.csv", "r", newline="") as file:
-            r = list(csv.reader(file))
-            for i in r:
-                # If the url already exists in csv file4 
-                if i[0] == url:
-                    output_url = i[1]
-                    self.output.config(state=NORMAL)
-                    self.output.delete(1.0, END)
-                    self.output.insert(1.0, output_url)
-                    self.output.configure(
-                        state=DISABLED, fg='black', font='helvetica 18')
-                    return
-
-        # If url is not correct and not in csv file
-        # Checking for internet connection
         # If user doesnt provide the URL
         if url == 'https://example.com/xyz':
             messagebox.showerror(
@@ -324,15 +326,23 @@ class Mainwin(Tk):
 
         # The provided url has successfully passed all integrity checks
         # Generating the shortened URL
-        slug=chr(randint(97, 122)) + chr(randint(97, 122)) + chr(randint(97, 122))
-        shorturl = "https://sos.vercel.app/" + slug
-        urldata = (url, shorturl)
-        requests.post('')
+        if url in self.db.values():
+            shorturl = "https://sosurl.vercel.app/" + list(self.db.keys())[list(self.db.values()).index(url)]
+        else:
+            slug = list(self.db.keys())[0]
+            while (slug in self.db):
+                slug=chr(randint(97, 122)) + chr(randint(97, 122)) + chr(randint(97, 122))
+            shorturl = "https://sosurl.vercel.app/" + slug
 
-        # Adding new contents to the file
-        with open("urlbase.csv", 'a+', newline="") as file:
-            w = csv.writer(file)
-            w.writerow(urldata)
+            # Adding new contents to the database
+            self.session.post('https://sosurl.vercel.app/post/',
+            data={
+                'csrfmiddlewaretoken': self.session.cookies['csrftoken'],
+                'data':json.dumps({'slug':slug,
+                'url':url})
+            },
+            headers={'referer':'https://sosurl.vercel.app/'})
+
         output_url = shorturl
 
         # Configuring the output entry box
@@ -362,10 +372,10 @@ class Mainwin(Tk):
     def customizations_frame(self):
         # The Functions
         on_click = lambda _:((self.text2.delete(0.0, END), self.text2.config(fg='black'))
-                              if 'Type custom suffix here...' in self.text2.get(0.0, END) else False)
+                            if 'Type custom slug here...' in self.text2.get(0.0, END) else False)
 
-        off_click = lambda _:((self.text2.insert(0.0, 'Type custom suffix here...'), self.text2.config(fg='#7c787c'))
-                               if self.text2.get(0.0, END).isspace() or self.text2.get(0.0, END) == "" else False)
+        off_click = lambda _:((self.text2.insert(0.0, 'Type custom slug here...'), self.text2.config(fg='#7c787c'))
+                            if self.text2.get(0.0, END).isspace() or self.text2.get(0.0, END) == "" else False)
 
         def command():
             # Function to switch between Custom and prog generated URL
@@ -376,7 +386,7 @@ class Mainwin(Tk):
                 self.output.delete(0.0, END)
                 self.output.config(state=DISABLED)
                 self.text2.config(state=NORMAL)
-                self.text2.insert(0.0, 'Type custom suffix here...')
+                self.text2.insert(0.0, 'Type custom slug here...')
                 self.text2.config(fg='grey')
                 self.conflict.config(text='')
                 self.conflict.place(x=20, y=70)
@@ -404,30 +414,30 @@ class Mainwin(Tk):
 
         # The checkbutton
         self.check = Checkbutton(self.customization_frame, bg='#262823', font='helvetica 15', activeforeground='gray',
-                                 activebackground='#262823', command=command, indicatoron=True, onvalue=1, offvalue=0)
+                                activebackground='#262823', command=command, indicatoron=True, onvalue=1, offvalue=0)
         
         Label(self.customization_frame, text='Customize', fg='white',
-              bg='#262823', font='Arial 18').place(x=20, y=0)
+            bg='#262823', font='Arial 18').place(x=20, y=0)
 
         # The 1st text widget(Domain prefix)
         self.text1 = Text(self.customization_frame, height=1,
-                          width=10, font='Arial 18', fg='#7c787c')
-        self.text1.insert(0.0, 'https://b.in/')
+                        width=21, font='Arial 18', fg='#7c787c')
+        self.text1.insert(0.0, 'https://sosurl.vercel.app/')
         self.text1.config(state=DISABLED)
 
         # The 2nd text widget(Suffix)
         self.text2 = Text(self.customization_frame, height=1,
-                          width=30, font='Arial 18', fg='#7c787c')
+                        width=21, font='Arial 18', fg='#7c787c')
         self.text2.config(state=DISABLED)
 
         # The status display label widget
         self.conflict = Label(self.customization_frame,
-                              font='Arial 18', bg='#262823')
+                            font='Arial 18', bg='#262823')
 
         # The placement of widgets
         self.check.place(x=0, y=0)
-        self.text1.place(x=20, y=30)
-        self.text2.place(x=154, y=30)
+        self.text1.place(x=21, y=30)
+        self.text2.place(x=290, y=30)
 
         # The event bindings
         self.text2.bind('<FocusIn>', on_click)
@@ -439,20 +449,20 @@ class Mainwin(Tk):
     def suggestions_frame(self):
         # The Suggestions Frame
         self.suggestions = LabelFrame(self.Qsframe, text='Suggestions', fg='white', bg='#262823', font='Arial 18',
-                                      height=100, width=580)
+                                    height=100, width=580)
 
         # The Suggestions output boxes
         self.sugg1 = Text(self.suggestions, height=1, width=5,
-                          font='Arial 18', state=DISABLED)
+                        font='Arial 18', state=DISABLED)
 
         self.sugg2 = Text(self.suggestions, height=1, width=5,
-                          font='Arial 18', state=DISABLED)
+                        font='Arial 18', state=DISABLED)
 
         self.sugg3 = Text(self.suggestions, height=1, width=5,
-                          font='Arial 18', state=DISABLED)
+                        font='Arial 18', state=DISABLED)
 
         self.sugg4 = Text(self.suggestions, height=1, width=5,
-                          font='Arial 18', state=DISABLED)
+                        font='Arial 18', state=DISABLED)
 
         # The placement of widgets
         self.sugg1.place(x=75, y=10)
@@ -473,7 +483,7 @@ class Mainwin(Tk):
             suggestions = []
             s = 0
             characters = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', "_",
-                          "-", ".", "!", "@", "#", "$", "%", "&", "*"]
+                        "-", ".", "!", "@", "#", "$", "%", "&", "*"]
             while s < 4:
                 d = domain + choice(characters)
                 if d in data or d in suggestions:
@@ -501,10 +511,7 @@ class Mainwin(Tk):
 
     def shoten_custom(self, _=None):
         # Function to store custom shortened URL provided by the user
-        custom_url = self.text1.get(0.0, END).strip(
-            '\n')+self.text2.get(0.0, END).strip('\n')
-        with open('urlbase.csv', 'r', newline="") as csv_:
-            content = list(csv.reader(csv_))
+        custom_url = self.text2.get(0.0, END).strip('\n')
 
         url = self.link.get()
 
@@ -525,38 +532,24 @@ class Mainwin(Tk):
                 'Syntax Error', 'Please enter a valid URL.')
             return
 
-        for i in content:
-            if url == i[0] and custom_url == i[1]:
+        for i in self.db:
+            if custom_url == i:
                 # Both custom and input URL match
                 self.conflict.config(
-                    text='The given url and custom url is already in use.', fg='#ffa500')
+                    text='The given url slug already in use.', fg='#ffa500')
                 break
-            elif url != i[0] and custom_url == i[1]:
-                # If Custom URL doesnt match the input URL
-                self.conflict.config(
-                    text='ERROR:The given custom url is already in use.', fg='#ffa500')
-                self.show_suggestions(custom_url[13:])
-                break
-            elif url == i[0] and custom_url != i[1]:
-                # If input URL doesnt match the custom URL
-                content[content.index(i)][1] = custom_url
-                self.conflict.config(
-                    text='The given custom url was successfully replaced.', fg='green')
-                break
-
         else:
-            # Storing the new custom URL in the csv file
-            content.append([url, custom_url])
+            # Storing the new custom URL in the database
+            self.session.post('https://sosurl.vercel.app/post/',
+                data={
+                    'csrfmiddlewaretoken': self.session.cookies['csrftoken'],
+                    'data':json.dumps({'slug':custom_url,
+                    'url':url})
+                },
+            headers={'referer':'https://sosurl.vercel.app/'})
             self.conflict.config(
-                text='The given url was shortened.', fg='green')
-
-        # Updating the history tab with new contents
-        with open("urlbase.csv", 'w', newline="") as file:
-            w = csv.writer(file)
-            w.writerows(content)
-        self.update_history()
-
-
+                text='The given url is shortened.', fg='green')
+            self.update_history()
 
     # The History Tab
     def history_frame_widget(self):
@@ -592,24 +585,38 @@ class Mainwin(Tk):
         self.hist_frame.text.insert(0.0, 'User history:\n\n')
 
         # Copy contents of csv to text widget
-        with open('urlbase.csv', newline="") as cs:
-            content = list(csv.reader(cs))
-            for index, val in enumerate(content):
-                self.hist_frame.text.insert(INSERT, f'URL-{index+1}:\n')
-                self.hist_frame.text.insert(
-                    INSERT, f'   Original:  {val[0]}  \n')
-                self.hist_frame.text.insert(
-                    INSERT, f'   Shortened: {val[1]}  \n\n')
-            else:
-                self.hist_frame.text.config(state=DISABLED)
+        response=self.session.get('https://sosurl.vercel.app/get')
+        self.db=json.loads(response.text)
+        count=0
+        for index in self.db:
+            self.hist_frame.text.insert(INSERT, f'URL-{count+1}:\n')
+            self.hist_frame.text.insert(
+                INSERT, f'   Original:  {self.db[index]}  \n')
+            self.hist_frame.text.insert(
+                INSERT, f'   Shortened: {"https://sosurl.vercel.app/"+index}  \n\n')
+            count+=1
+        else:
+            self.hist_frame.text.config(state=DISABLED)
 
-        # If csv file is empty
-        if not list(content):
+        # If database is empty
+        if not self.db:
             self.hist_frame.text.config(state=NORMAL)
             self.hist_frame.text.insert(
                 END, 'The shortened url\'s will be shown here.')
             self.hist_frame.text.config(state=DISABLED)
 
+    def openurl(self, _):
+        print(self.text1.get(0.0, END).strip('\n')+self.text2.get(0.0, END).strip('\n'))
+        if self.output.get(0.0, END).strip('\n') and self.output.get(0.0, END).strip('\n')!='The shortened url comes here...':
+            webbrowser.open(self.output.get(0.0, END).strip('\n'))
+        elif self.text2.get(0.0, END).strip('\n'):
+            webbrowser.open(self.text1.get(0.0, END).strip('\n')+self.text2.get(0.0, END).strip('\n'))
+        else:
+            messagebox.showerror("No Shortened URL", "Shorten a url to open in browser.")
+
+
+    def __del__(self):
+        self.session.close()
 
 # If this file is executed individually
 if __name__ == '__main__':
@@ -622,5 +629,6 @@ if __name__ == '__main__':
     else:
         # Execution of main code
         main_app = Mainwin()
+        main_app.connect()
         main_app.create_mainwidgets()
         main_app.mainloop()
