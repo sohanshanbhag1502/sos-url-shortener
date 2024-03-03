@@ -1,13 +1,13 @@
 {
     "builds": [{
-        "src": "URLShortener/wsgi.py",
+        "src": "URLShortner/wsgi.py",
         "use": "@vercel/python",
         "config": { "maxLambdaSize": "15mb" , "runtime": "python3.9" }
     }],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "URLShortener/wsgi.py"
+            "dest": "URLShortner/wsgi.py"
         }
     ]
 }
