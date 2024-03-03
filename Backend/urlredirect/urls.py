@@ -17,9 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-admin.site.site_header='URL Shortner'
-admin.site.site_title='URL Shortner'
-admin.site.index_title='Welcome to URL Shortener portal'
+admin.site.site_header='SOS URL Shortener'
+admin.site.site_title='SOS URL Shortener'
+admin.site.index_title='SOS URL Shortener'
 
 urlpatterns = [
     path('', include('urlredirect.urls'))
