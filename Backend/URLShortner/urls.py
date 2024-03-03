@@ -20,6 +20,7 @@ from urlredirect import views
 
 urlpatterns = [
     path("", views.home, name='urlredirect'),
-    path('<slug:slug>', views.index, name='urlredirect'),
-    path('post/', views.addurl, name='urlredirect')
+    path('get', views.sendurls, name='urlredirect'),
+    path('post/', views.addurl, name='urlredirect'),
+    path('<slug:slug>', views.index, name='urlredirect')
 ]
