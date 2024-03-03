@@ -29,3 +29,9 @@ def addurl(request):
             obj=URLS(**data)
             obj.save()
             return HttpResponse("URL Added successfully")
+
+def sendurls(request):
+    db={}
+    for i in URLS.objects.all():
+        db[i.slug]=i.url
+    return HttpResponse(json.dumps(db), headers={"Content-Type":'application/json'})
